@@ -1,8 +1,6 @@
-# Sync Youtube videos from entire channel to cloudflare stream
+# Sync Youtube videos from entire channel to Cloudflare Stream
 # Author: Ammar
 # Date: 2024
-# License: MIT
-# Usage: python3 sync.py
 
 from dotenv import load_dotenv
 import os
@@ -29,12 +27,9 @@ yt_dlp_path = r"C:\tools\yt-dlp.exe"
 supabase: Client = create_client(supabase_url, supabase_key)
 
 # Retrieve the list of video IDs from your channel
-url = f"https://www.googleapis.com/youtube/v3/search?key={youtube_api_key}&channelId={channel_id}&part=snippet,id&order=date&maxResults=72"
+url = f"https://www.googleapis.com/youtube/v3/search?key={youtube_api_key}&channelId={channel_id}&part=snippet,id&order=viewCount&maxResults=72"
 response = requests.get(url)
 data = response.json()
-
-# Initialize a counter variable
-video_count = 0
 
 # Process each video
 for search_result in data["items"]:
@@ -43,12 +38,11 @@ for search_result in data["items"]:
     video_description = search_result["snippet"]["description"]
     video_url = f"https://www.youtube.com/watch?v={video_id}"
 
-    # Increment the video count
-    video_count += 1
+    # Check if the video ID already exists in the Supabase table
+    existing_video = supabase.table("video_content").select("youtube_videoId").eq("youtube_videoId", video_id).execute()
     
-    # Skip the first video
-    if video_count == 1:
-        print(f"Skipping the first video: {video_title}")
+    if len(existing_video.data) > 0:
+        print(f"Skipping video: {video_title} (already exists in Supabase)")
         continue
     
     # Retrieve video details using the YouTube Data API
